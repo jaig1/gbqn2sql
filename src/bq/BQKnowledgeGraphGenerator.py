@@ -54,7 +54,7 @@ class BQKnowledgeGraphGenerator:
         self.project_id = project_id
         self.dataset_id = dataset_id
         self.use_service_account = use_service_account
-        self.service_account_email = service_account_email or "bigquery-text2sql@gen-lang-client-0454606702.iam.gserviceaccount.com"
+        self.service_account_email = service_account_email or os.getenv('GOOGLE_CLOUD_SERVICE_ACCOUNT')
         
         # Initialize BigQuery client
         self.client = self._initialize_client()
@@ -1445,7 +1445,7 @@ class BQKnowledgeGraphGenerator:
 def generate_bq_sql_kg():
     """Main function to generate Enhanced BigQuery SQL Knowledge Graph"""
     # Configuration
-    project_id = "gen-lang-client-0454606702"
+    project_id = os.getenv('GCP_PROJECT_ID') or "your-project-id"
     dataset_id = "insurance_analytics"
     
     generator = BQKnowledgeGraphGenerator(

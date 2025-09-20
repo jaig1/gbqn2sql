@@ -870,7 +870,7 @@ def generate_ai_explanation_for_sparql_results(sparql_query: str, results: List[
         from vertexai.generative_models import GenerativeModel
         
         # Initialize Vertex AI
-        project_id = os.getenv('PROJECT_ID', 'gen-lang-client-0454606702')
+        project_id = os.getenv('GCP_PROJECT_ID', 'your-project-id')
         location = os.getenv('VERTEX_AI_LOCATION', 'us-central1')
         model_name = os.getenv('GEMINI_MODEL_NAME', 'gemini-2.5-flash-lite')
         
