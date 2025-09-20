@@ -1,0 +1,100 @@
+# GBQN2SQL: BigQuery Knowledge Graph-Enhanced Natural Language to SQL System
+# ============================================================================
+# 
+# This requirements.txt file contains all dependencies needed to run the
+# BigQuery Knowledge Graph-Enhanced Text-to-SQL system.
+#
+# Installation:
+#   pip install -r requirements.txt
+#
+# Or using UV (recommended):
+#   uv sync
+#
+# Project: https://github.com/yourusername/gbqn2sql
+# Version: 1.0.0
+
+# ==============================================================================
+# CORE BIGQUERY & GOOGLE CLOUD DEPENDENCIES
+# ==============================================================================
+
+# BigQuery client library for database operations
+google-cloud-bigquery>=3.37.0
+
+# Google Cloud AI Platform for Vertex AI integration
+google-cloud-aiplatform>=1.113.0
+
+# ==============================================================================
+# KNOWLEDGE GRAPH & SEMANTIC PROCESSING
+# ==============================================================================
+
+# RDF library for knowledge graph operations
+rdflib>=7.1.0
+
+# Network analysis library for graph operations
+networkx>=3.5.0
+
+# ==============================================================================
+# DATA PROCESSING & ANALYSIS
+# ==============================================================================
+
+# DataFrame operations and data manipulation
+pandas>=2.3.0
+
+# Numerical computing library
+numpy>=1.24.0
+
+# ==============================================================================
+# WEB APPLICATION FRAMEWORK
+# ==============================================================================
+
+# Web application framework for the user interface
+streamlit>=1.49.0
+
+# Interactive graph visualization component for Streamlit
+streamlit-agraph>=0.0.45
+
+# ==============================================================================
+# CONFIGURATION & ENVIRONMENT
+# ==============================================================================
+
+# Environment variable management
+python-dotenv>=1.1.0
+
+# ==============================================================================
+# DEVELOPMENT & JUPYTER SUPPORT
+# ==============================================================================
+
+# Jupyter kernel for notebook integration
+ipykernel>=6.30.0
+
+# Full Jupyter environment
+jupyter>=1.0.0
+
+# ==============================================================================
+# OPTIONAL DEVELOPMENT DEPENDENCIES
+# ==============================================================================
+# Uncomment the following lines if you need development tools:
+
+# Testing framework
+# pytest>=8.4.0
+# pytest-cov>=4.0.0
+
+# Code formatting and linting
+# black>=23.0.0
+# isort>=5.12.0
+# flake8>=6.0.0
+
+# ==============================================================================
+# PRODUCTION DEPLOYMENT NOTES
+# ==============================================================================
+# 
+# For production deployment, consider:
+# 1. Pin exact versions instead of using >= constraints
+# 2. Use pip-tools to generate a lock file
+# 3. Review security with: pip-audit
+# 4. Consider using Docker for consistent environments
+#
+# To generate a lock file:
+#   pip-compile requirements.txt
+#
+# ==============================================================================

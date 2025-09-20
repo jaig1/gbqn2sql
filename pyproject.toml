@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gbqn2sql"
+version = "1.0.0"
+description = "BigQuery Knowledge Graph-Enhanced Natural Language to SQL System"
+readme = "README.md"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+keywords = [
+    "bigquery",
+    "sql",
+    "nlp",
+    "knowledge-graph", 
+    "text-to-sql",
+    "gemini",
+    "ai"
+]
+requires-python = ">=3.11"
+dependencies = [
+    "google-cloud-bigquery>=3.37.0",
+    "google-cloud-aiplatform>=1.113.0",
+    "rdflib>=7.1.0",
+    "networkx>=3.5.0",
+    "pandas>=2.3.0",
+    "numpy>=1.24.0",
+    "streamlit>=1.49.0",
+    "streamlit-agraph>=0.0.45",
+    "python-dotenv>=1.1.0",
+    "ipykernel>=6.30.0",
+    "jupyter>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.4.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+line-length = 88
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bq"]
