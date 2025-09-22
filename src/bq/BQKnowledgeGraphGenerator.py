@@ -25,9 +25,21 @@ from rdflib import Graph, Namespace, URIRef, Literal, BNode
 from rdflib.namespace import RDF, RDFS, XSD, OWL, SKOS, DCTERMS
 import subprocess
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    logger = logging.getLogger(__name__)
+    logger.info("✅ Environment variables loaded from .env file")
+except ImportError:
+    logger = logging.getLogger(__name__)
+    logger.warning("⚠️ python-dotenv not installed. Environment variables should be set manually.")
+except Exception as e:
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Could not load .env file: {e}")
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class BQKnowledgeGraphGenerator:
@@ -74,15 +86,20 @@ class BQKnowledgeGraphGenerator:
         """Initialize BigQuery client with appropriate authentication"""
         try:
             if self.use_service_account:
-                # Use service account impersonation
-                cmd = ["gcloud", "auth", "application-default", "login", "--impersonate-service-account", self.service_account_email]
-                result = subprocess.run(cmd, capture_output=True, text=True)
-                if result.returncode != 0:
-                    logger.warning(f"Service account impersonation setup may have issues: {result.stderr}")
-                
-                # Initialize client with default credentials
-                credentials, _ = default()
-                client = bigquery.Client(project=self.project_id, credentials=credentials)
+                # Validate service account email
+                if not self.service_account_email:
+                    logger.warning("Service account email not provided, falling back to default credentials")
+                    self.use_service_account = False
+                else:
+                    # Use service account impersonation
+                    cmd = ["gcloud", "auth", "application-default", "login", "--impersonate-service-account", self.service_account_email]
+                    result = subprocess.run(cmd, capture_output=True, text=True)
+                    if result.returncode != 0:
+                        logger.warning(f"Service account impersonation setup may have issues: {result.stderr}")
+                    
+                    # Initialize client with default credentials
+                    credentials, _ = default()
+                    client = bigquery.Client(project=self.project_id, credentials=credentials)
             else:
                 # Use default application credentials
                 client = bigquery.Client(project=self.project_id)
