@@ -1468,7 +1468,7 @@ def generate_bq_sql_kg():
     generator = BQKnowledgeGraphGenerator(
         project_id=project_id,
         dataset_id=dataset_id,
-        use_service_account=True
+        use_service_account=False  # Use Application Default Credentials
     )
     
     try:
