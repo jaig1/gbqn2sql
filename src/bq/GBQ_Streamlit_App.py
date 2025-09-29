@@ -1245,16 +1245,6 @@ def main():
     st.sidebar.write("""
     This is the BigQuery version of the Knowledge Graph-enhanced 
     text-to-SQL system.
-    
-    **Current Features:**
-    • Direct BigQuery SQL execution
-    • Sample query library  
-    • Schema reference guide
-    • Knowledge graph visualization
-    
-    **Coming Soon:**
-    • AI-powered query generation
-    • Schema context comparison
     """)
     
     # Check requirements before routing

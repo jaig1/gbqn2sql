@@ -28,6 +28,7 @@ class GBQ_KGVisualizer:
         self.business = Namespace("http://business.org/schema#")
         self.data = Namespace("http://data.org/schema#")
         self.insurance = Namespace("http://insurance.org/schema#")
+        self.stats = Namespace("http://statistics.org/schema#")
         
         # Color palette for different node types (BigQuery optimized)
         self.node_colors = {
@@ -395,6 +396,281 @@ class GBQ_KGVisualizer:
                     target=col_uri,
                     label="has column",
                     color='#666666'
+                )
+                edges.append(edge)
+        
+        return nodes, edges
+    
+    def create_business_intelligence_dashboard(self, focus_filter: str = "Business Rules") -> Tuple[List[Node], List[Edge]]:
+        """Create a focused Business Intelligence Dashboard view"""
+        nodes = []
+        edges = []
+        added_nodes = set()
+        
+        # Enhanced color palette for business intelligence
+        bi_colors = {
+            'agent_performance': '#FF6B6B',     # Coral for agent metrics
+            'claims_severity': '#4ECDC4',       # Teal for claim analysis  
+            'claims_status': '#45B7D1',         # Blue for status tracking
+            'claims_timing': '#96CEB4',         # Mint for time-based rules
+            'claims_value': '#FFEAA7',          # Yellow for value thresholds
+            'financial_metrics': '#DDA0DD',     # Plum for financial rules
+            'premium_segmentation': '#98D8C8',  # Aqua for segmentation
+            'demographics': '#F7DC6F',          # Gold for customer demographics
+            'data_quality': '#BB8FCE',          # Lavender for quality rules
+            'BusinessConcept': '#FF9800',       # Orange for concepts
+            'Table': '#4285F4',                 # Google Blue for tables
+            'Column_PII': '#E74C3C',            # Red for PII columns
+            'Column_Sensitive': '#F39C12',      # Orange for sensitive columns
+            'Column_Regular': '#27AE60'         # Green for regular columns
+        }
+        
+        # 1. CREATE BUSINESS RULES LAYER (filtered by focus)
+        rule_categories = {}
+        if focus_filter in ["All", "Business Rules"]:
+            for subj, _, _ in self.graph.triples((None, rdflib.RDF.type, self.business.Rule)):
+                rule_uri = str(subj)
+                rule_label = self.get_node_label(rule_uri)
+                rule_desc = self.get_node_description(rule_uri)
+                
+                # Get rule category and logic
+                category = "general"
+                logic = ""
+                for _, _, cat_obj in self.graph.triples((URIRef(rule_uri), self.business.category, None)):
+                    category = str(cat_obj)
+                    break
+                
+                for _, _, logic_obj in self.graph.triples((URIRef(rule_uri), self.business.logic, None)):
+                    logic = str(logic_obj)
+                    break
+                
+                # Track categories for grouping and apply category filter
+                if category not in rule_categories:
+                    rule_categories[category] = []
+                rule_categories[category].append(rule_uri)
+                
+
+                
+                # Create enhanced rule node with business intelligence
+                rule_color = bi_colors.get(category, '#EA4335')
+                rule_size = 25 if 'subquery' in logic.lower() else 20  # Larger for complex rules
+                
+                # Enhanced tooltip with business context
+                tooltip = f"📋 Business Rule: {rule_label}\\n"
+                tooltip += f"🏷️ Category: {category.replace('_', ' ').title()}\\n"
+                tooltip += f"⚙️ Logic: {logic[:100]}{'...' if len(logic) > 100 else ''}\\n"
+                tooltip += f"📖 Description: {rule_desc}"
+                
+                rule_node = Node(
+                    id=rule_uri,
+                    label=f"{rule_label}\\n[{category.replace('_', ' ')}]",
+                    size=rule_size,
+                    color=rule_color,
+                    title=self._sanitize_title(tooltip),
+                    shape="box"  # Rectangular for business rules
+                )
+                nodes.append(rule_node)
+                added_nodes.add(rule_uri)
+        
+        # 2. CREATE BUSINESS CONCEPTS LAYER (filtered by focus) 
+        concept_cluster = {}
+        if focus_filter in ["All", "Business Domain Vocabulary", "Synonym Networks"]:
+            for subj, _, _ in self.graph.triples((None, rdflib.RDF.type, self.business.Concept)):
+                concept_uri = str(subj)
+                concept_label = self.get_node_label(concept_uri)
+                concept_desc = self.get_node_description(concept_uri)
+                
+                # Create central concept node
+                concept_tooltip = f"💡 Business Concept: {concept_label}\\n📖 {concept_desc}"
+                concept_node = Node(
+                    id=concept_uri,
+                    label=f"💡 {concept_label}",
+                    size=30,
+                    color=bi_colors['BusinessConcept'],
+                    title=self._sanitize_title(concept_tooltip),
+                    shape="diamond"  # Diamond for concepts
+                )
+                nodes.append(concept_node)
+                added_nodes.add(concept_uri)
+                
+                # Get related terms (synonyms) and create satellite nodes
+                related_terms = []
+                for _, _, term_obj in self.graph.triples((URIRef(concept_uri), self.business.relatedTerm, None)):
+                    related_terms.append(str(term_obj))
+            
+                # Create synonym nodes (only for Synonym Networks focus)
+                if focus_filter in ["All", "Synonym Networks"]:
+                    for i, term in enumerate(related_terms):
+                        synonym_id = f"{concept_uri}_synonym_{i}"
+                        synonym_node = Node(
+                            id=synonym_id,
+                            label=term,
+                            size=12,
+                            color="#FFE0B2",  # Light orange for synonyms
+                            title=self._sanitize_title(f"📝 Synonym for {concept_label}: {term}"),
+                            shape="ellipse"
+                        )
+                        nodes.append(synonym_node)
+                        
+                        # Connect synonym to concept
+                        synonym_edge = Edge(
+                            source=concept_uri,
+                            target=synonym_id,
+                            label="synonym",
+                            color="#FFA726",
+                            dashes=True  # Dashed for synonym relationships
+                        )
+                        edges.append(synonym_edge)
+        
+        # 3. CREATE TABLE LAYER (filtered by focus)
+        if focus_filter in ["All", "Business Rules", "Data Governance"]:
+            for subj, _, _ in self.graph.triples((None, rdflib.RDF.type, self.sql.Table)):
+                table_uri = str(subj)
+                table_label = self.get_node_label(table_uri)
+                
+                # Get business concept for table
+                table_concept = ""
+                quality_score = ""
+                for _, _, concept_obj in self.graph.triples((URIRef(table_uri), self.insurance.concept, None)):
+                    table_concept = str(concept_obj).replace('_', ' ').title()
+                    break
+                
+                for _, _, quality_obj in self.graph.triples((URIRef(table_uri), self.stats.qualityScore, None)):
+                    quality_score = f" (Q: {float(str(quality_obj)):.1f}%)"
+                    break
+                
+                # Enhanced table tooltip
+                table_tooltip = f"🗃️ Table: {table_label}\\n"
+                if table_concept:
+                    table_tooltip += f"💼 Business Concept: {table_concept}\\n"
+                if quality_score:
+                    table_tooltip += f"📊 Data Quality: {quality_score.strip(' (Q: )')}"
+                
+                table_node = Node(
+                    id=table_uri,
+                    label=f"{table_label}{quality_score}",
+                    size=35,
+                    color=bi_colors['Table'],
+                    title=self._sanitize_title(table_tooltip),
+                    shape="box"
+                )
+                nodes.append(table_node)
+                added_nodes.add(table_uri)        # 4. CREATE COLUMN LAYER (only for Data Governance focus)
+        pii_columns = []
+        sensitive_columns = []
+        regular_columns = []
+        
+        if focus_filter in ["All", "Data Governance"]:
+            for subj, _, _ in self.graph.triples((None, rdflib.RDF.type, self.sql.Column)):
+                col_uri = str(subj)
+                col_label = self.get_node_label(col_uri)
+                
+                # Determine PII status and sensitivity
+                is_pii = False
+                sensitivity_level = "low"
+                sensitivity_reason = ""
+                business_meaning = ""
+                data_type = ""
+                
+                for _, _, pii_obj in self.graph.triples((URIRef(col_uri), self.data.isPII, None)):
+                    is_pii = str(pii_obj).lower() == 'true'
+                    break
+                    
+                for _, _, sens_obj in self.graph.triples((URIRef(col_uri), self.data.sensitivityLevel, None)):
+                    sensitivity_level = str(sens_obj)
+                    break
+                    
+                for _, _, reason_obj in self.graph.triples((URIRef(col_uri), self.data.sensitivityReason, None)):
+                    sensitivity_reason = str(reason_obj)
+                    break
+                    
+                for _, _, meaning_obj in self.graph.triples((URIRef(col_uri), self.business.meaning, None)):
+                    business_meaning = str(meaning_obj)
+                    break
+                    
+                for _, _, type_obj in self.graph.triples((URIRef(col_uri), self.data.bigqueryType, None)):
+                    data_type = str(type_obj)
+                    break
+                
+                # For data governance focus, only show PII and sensitive columns
+                if not (is_pii or sensitivity_level in ["high", "medium"]):
+                    continue
+                
+                # Categorize column for coloring
+                if is_pii:
+                    col_color = bi_colors['Column_PII']
+                    col_icon = "🔒"
+                    pii_columns.append(col_uri)
+                elif sensitivity_level == "high":
+                    col_color = bi_colors['Column_Sensitive'] 
+                    col_icon = "⚠️"
+                    sensitive_columns.append(col_uri)
+                else:
+                    col_color = bi_colors['Column_Regular']
+                    col_icon = "📊"
+                    regular_columns.append(col_uri)
+                
+                # Enhanced column tooltip with business intelligence
+                col_tooltip = f"{col_icon} Column: {col_label} ({data_type})\\n"
+                if is_pii:
+                    col_tooltip += "🔒 Contains PII (Personally Identifiable Information)\\n"
+                if sensitivity_level != "low":
+                    col_tooltip += f"⚠️ Sensitivity: {sensitivity_level.title()}\\n"
+                if sensitivity_reason:
+                    col_tooltip += f"📋 Reason: {sensitivity_reason}\\n"
+                if business_meaning:
+                    col_tooltip += f"💼 Business Meaning: {business_meaning}"
+                
+                col_size = 18 if is_pii else (15 if sensitivity_level == "high" else 12)
+                
+                col_node = Node(
+                    id=col_uri,
+                    label=f"{col_icon} {col_label}",
+                    size=col_size,
+                    color=col_color,
+                    title=self._sanitize_title(col_tooltip)
+                )
+                nodes.append(col_node)
+                added_nodes.add(col_uri)
+        
+        # 5. CREATE INTELLIGENT RELATIONSHIPS
+        
+        # Business rules to tables relationships
+        for subj, _, obj in self.graph.triples((None, self.business.appliesTo, None)):
+            rule_uri = str(subj)
+            table_uri = str(obj)
+            if rule_uri in added_nodes and table_uri in added_nodes:
+                edge = Edge(
+                    source=rule_uri,
+                    target=table_uri,
+                    label="applies to",
+                    color="#E74C3C",
+                    width=3
+                )
+                edges.append(edge)
+        
+        # Table to column relationships with PII highlighting
+        for subj, _, obj in self.graph.triples((None, self.sql.inTable, None)):
+            col_uri = str(subj)
+            table_uri = str(obj)
+            if col_uri in added_nodes and table_uri in added_nodes:
+                # Different edge styles for different column types
+                if col_uri in pii_columns:
+                    edge_color = "#E74C3C"  # Red for PII
+                    edge_width = 3
+                elif col_uri in sensitive_columns:
+                    edge_color = "#F39C12"  # Orange for sensitive
+                    edge_width = 2
+                else:
+                    edge_color = "#27AE60"  # Green for regular
+                    edge_width = 1
+                
+                edge = Edge(
+                    source=table_uri,
+                    target=col_uri,
+                    label="contains",
+                    color=edge_color,
+                    width=edge_width
                 )
                 edges.append(edge)
         
@@ -912,8 +1188,23 @@ Keep your explanation conversational, informative, and accessible to non-technic
 
 def render_kg_visualization_page():
     """Render the BigQuery Knowledge Graph Visualization page in Streamlit"""
-    st.title("🕸️ BigQuery Knowledge Graph Visualization")
+    st.title("🕸️ Knowledge Graph Visualizer")
     st.markdown("Interactive exploration of the BigQuery SQL Knowledge Graph generated for the insurance_analytics dataset.")
+    
+    # Focus dropdown in main page
+    bi_focus = st.selectbox(
+        "Select Focus Area",
+        [
+            "All",
+            "Business Rules",
+            "Business Domain Vocabulary", 
+            "Data Governance",
+            "Synonym Networks"
+        ],
+        help="Choose which aspect of business intelligence to visualize"
+    )
+    
+    st.divider()  # Visual separator
     
     # Initialize BigQuery visualizer
     kg_file_path = "bqkg/bq_knowledge_graph.ttl"
@@ -921,150 +1212,64 @@ def render_kg_visualization_page():
     try:
         visualizer = GBQ_KGVisualizer(kg_file_path)
         
-        # Sidebar controls
-        st.sidebar.header("BigQuery Visualization Controls")
-        
-        # View selection
-        view_type = st.sidebar.selectbox(
-            "Select BigQuery View Type",
-            [
-                "BigQuery Dataset Overview",
-                "Table Schema View", 
-                "Business Rules View", 
-                "Enhanced Join Patterns View",
-                "Business Intelligence Context View",
-                "Data Privacy & Compliance View", 
-                "Intelligent Query Optimization View",
-                "Custom Filter"
-            ],
-            help="Choose what aspects of the BigQuery knowledge graph to visualize"
-        )
-        
-        # Configuration
+        # Hardcoded configuration for Business Intelligence Dashboard
         config = Config(
-            width=800,
-            height=600,
+            width=1200,  # Wider for dashboard
+            height=800,  # Taller for dashboard
             directed=True,
             physics=True,
             hierarchical=False,
             nodeHighlightBehavior=True,
-            highlightColor="#4285F4",  # Google Blue highlight
-            collapsible=False
+            highlightColor="#FF6B6B",  # Coral highlight for business focus
+            collapsible=False,
+            # Optimized physics for business intelligence layout
+            barnesHut_gravitationalConstant=-3000,
+            barnesHut_centralGravity=0.1,
+            barnesHut_springLength=200,
+            barnesHut_springConstant=0.05,
+            barnesHut_damping=0.4
         )
         
-        # Physics settings
-        if st.sidebar.checkbox("Enable Physics", value=True):
-            config.physics = True
-            config.barnesHut_gravitationalConstant = st.sidebar.slider(
-                "Gravitational Constant", 
-                -8000, -1000, -2000,
-                help="Controls how strongly nodes attract each other"
-            )
-        else:
-            config.physics = False
+        # Generate Business Intelligence Dashboard visualization
+        st.subheader(f"🎯 Business Intelligence Dashboard - {bi_focus}")
+        st.markdown(f"**Focus: {bi_focus} - Targeted view of business domain intelligence**")
         
-        # Generate visualization based on selected view
-        if view_type == "BigQuery Dataset Overview":
-            st.subheader("🏗️ BigQuery Dataset Structure")
-            st.markdown("**Complete insurance_analytics dataset hierarchy with all tables and columns**")
-            
-            nodes, edges = visualizer.create_bigquery_dataset_view()
-            
-        elif view_type == "Table Schema View":
-            st.subheader("📊 BigQuery Table Schema View")
-            st.markdown("**Basic table-column relationships from BigQuery structure**")
-            
-            nodes, edges = visualizer.create_table_schema_view()
-            
-        elif view_type == "Business Rules View":
-            st.subheader("📋 BigQuery Business Rules View - The Game Changer")
-            st.markdown("**Semantic business logic and domain-specific intelligence for BigQuery analytics**")
-            
-            nodes, edges = visualizer.create_business_rules_view()
-            
-        elif view_type == "Enhanced Join Patterns View":
-            st.subheader("🔗 BigQuery Enhanced Join Patterns - Canonical Relationships")
-            st.markdown("**Optimized, business-validated relationship paths for BigQuery performance**")
-            
-            nodes, edges = visualizer.create_join_patterns_view()
-            
-        elif view_type == "Business Intelligence Context View":
-            st.subheader("🎯 BigQuery Business Intelligence Context")
-            st.markdown("**Domain-aware data interpretation and contextual intelligence for BigQuery analytics**")
-            
-            # For now, show business rules as they contain business intelligence
-            nodes, edges = visualizer.create_business_rules_view()
-            
-        elif view_type == "Data Privacy & Compliance View":
-            st.subheader("🔍 BigQuery Data Privacy & Compliance Intelligence")
-            st.markdown("**Regulatory and privacy-aware data handling for BigQuery datasets**")
-            
-            # Create a privacy-focused view showing which columns contain PII
-            nodes, edges = visualizer.create_privacy_aware_view()
-            
-        elif view_type == "Intelligent Query Optimization View":
-            st.subheader("🚀 BigQuery Intelligent Query Optimization")
-            st.markdown("**Performance and efficiency intelligence for BigQuery query optimization**")
-            
-            # Show join patterns as they represent optimized query paths
-            nodes, edges = visualizer.create_join_patterns_view()
-            
-        else:  # Custom Filter
-            st.subheader("🎛️ Custom BigQuery Filtered View")
-            st.markdown("**Mix and match different node types for custom BigQuery exploration**")
-            
-            with st.expander("💡 BigQuery Custom View Tips", expanded=False):
-                st.markdown("""
-                **Recommended BigQuery Combinations**:
-                - **Tables + Business Rules**: See how business logic maps to BigQuery data structure
-                - **Tables + Columns + Constraints**: Complete BigQuery schema with validation rules
-                - **Business Rules + Join Patterns**: Business intelligence with optimized BigQuery queries
-                - **Dataset + Tables**: BigQuery dataset hierarchy and organization
-                - **All Types**: Complete BigQuery knowledge graph overview (may be complex)
-                """)
-            
-            # Multi-select for node types
-            selected_types = st.multiselect(
-                "Select BigQuery Node Types",
-                ["Dataset", "Table", "Column", "BusinessRule", "CanonicalJoinPattern", "Constraint"],
-                default=["Table", "BusinessRule"],
-                help="Choose which types of BigQuery nodes to include in the visualization"
-            )
-            
-            max_nodes = st.slider("Maximum Nodes", 10, 100, 50)
-            
-            if selected_types:
-                nodes, edges = visualizer.create_filtered_graph(selected_types, max_nodes)
-            else:
-                nodes, edges = [], []
-        
-        # Display statistics
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Nodes", len(nodes))
-        with col2:
-            st.metric("Edges", len(edges))
-        with col3:
-            st.metric("Connectivity", f"{len(edges)/max(len(nodes), 1):.1f}")
+        # Generate focused view
+        nodes, edges = visualizer.create_business_intelligence_dashboard(focus_filter=bi_focus)
         
         # Render the graph
         if nodes:
-            st.subheader("Interactive BigQuery Knowledge Graph")
             st.markdown("🔍 **Hover** over nodes for details • 🖱️ **Drag** to rearrange • 🔍 **Zoom** with mouse wheel")
             
             return_value = agraph(nodes=nodes, edges=edges, config=config)
             
             # Display selected node information
             if return_value:
-                st.subheader("Selected BigQuery Node Details")
+                st.subheader("🔍 Selected Business Entity Details")
+                
                 try:
                     # Handle the return value safely - could be URI, node ID, or other format
                     if isinstance(return_value, str):
-                        st.text(f"Selected Node: {return_value}")
+                        # Enhanced display for BI Dashboard
+                        st.text(f"🎯 Selected Entity: {return_value}")
+                        
+                        # Determine entity type and show relevant business context
+                        if "/business-rules/" in return_value:
+                            st.success("📋 Business Rule Selected")
+                        elif "/business-concepts/" in return_value:
+                            st.success("💡 Business Concept Selected")
+                        elif "/tables/" in return_value:
+                            st.success("🗃️ Database Table Selected")
+                        elif "/columns/" in return_value:
+                            st.success("📊 Database Column Selected")
+
+                        
                         # Try to get details for this node from the visualizer
                         node_details = visualizer.get_node_details_by_uri(return_value)
                         if node_details and 'error' not in node_details:
-                            st.json(node_details)
+                            # Show enhanced details for BI Dashboard
+                            with st.expander("📖 Detailed Business Intelligence", expanded=True):
+                                st.json(node_details)
                         elif 'error' in node_details:
                             st.warning(f"Could not find detailed information for this node: {node_details['error']}")
                         else:

@@ -667,17 +667,41 @@ class BQKnowledgeGraphGenerator:
                 for col_name in columns:
                     # Look for foreign key patterns (column ending in _id)
                     if col_name.lower().endswith('_id') and col_name.lower() != f"{table_name.lower()}_id":
-                        # Extract referenced table name
-                        ref_table = col_name.lower().replace('_id', '')
+                        # Extract referenced table name and try different variations
+                        base_ref_table = col_name.lower().replace('_id', '')
                         
-                        # Check if referenced table exists
-                        if ref_table in [t.lower() for t in table_uris.keys()]:
+                        # Special handling for specific FK relationships
+                        if base_ref_table == 'policy':
+                            ref_table = 'insurance_policies'
+                        elif base_ref_table == 'customer':
+                            ref_table = 'insurance_customers'  
+                        elif base_ref_table == 'agent':
+                            ref_table = 'insurance_agents'
+                        elif base_ref_table == 'claim':
+                            ref_table = 'insurance_claims'
+                        else:
+                            # Try different table name variations (singular -> plural)
+                            possible_ref_tables = [
+                                f"insurance_{base_ref_table}",      # insurance_customer
+                                f"insurance_{base_ref_table}s",     # insurance_customers  
+                            ]
+                            
+                            ref_table = None
+                            for possible_ref in possible_ref_tables:
+                                if possible_ref in [t.lower() for t in table_uris.keys()]:
+                                    ref_table = possible_ref
+                                    break
+                        
+                        # Check if referenced table exists and is not the same table (no self-references)
+                        if ref_table and ref_table != table_name.lower():
                             # Find actual table name (case-sensitive)
                             actual_ref_table = next(t for t in table_uris.keys() if t.lower() == ref_table)
                             
                             fk_uri = URIRef(f"{table_uri}/foreignKeys/{col_name}")
                             ref_table_uri = table_uris[actual_ref_table]
-                            ref_col_uri = URIRef(f"{ref_table_uri}/columns/id")  # Assume 'id' is the referenced column
+                            # Use the actual primary key column name
+                            pk_col_name = f"{base_ref_table}_id"
+                            ref_col_uri = URIRef(f"{ref_table_uri}/columns/{pk_col_name}")
                             col_uri = URIRef(f"{table_uri}/columns/{col_name}")
                             
                             # Add foreign key metadata
@@ -694,7 +718,7 @@ class BQKnowledgeGraphGenerator:
                                 'from_table': table_name,
                                 'to_table': actual_ref_table,
                                 'from_column': col_name,
-                                'to_column': 'id'
+                                'to_column': pk_col_name
                             })
         
         print(f"✓ {len(fk_relationships)} foreign key relationships identified")
@@ -704,28 +728,28 @@ class BQKnowledgeGraphGenerator:
         """Add semantic meaning to relationships"""
         # Insurance domain relationship semantics
         relationship_semantics = {
-            ('policies', 'customers'): {
+            ('insurance_policies', 'insurance_customers'): {
                 'relationship_type': 'BELONGS_TO',
                 'cardinality': 'MANY_TO_ONE',
                 'business_meaning': 'Each policy belongs to one customer',
                 'join_hint': 'Frequently joined for customer policy analysis'
             },
-            ('policies', 'agents'): {
+            ('insurance_policies', 'insurance_agents'): {
                 'relationship_type': 'SOLD_BY',
                 'cardinality': 'MANY_TO_ONE',
                 'business_meaning': 'Each policy is sold by one agent',
                 'join_hint': 'Frequently joined for agent performance analysis'
             },
-            ('claims', 'policies'): {
+            ('insurance_claims', 'insurance_policies'): {
                 'relationship_type': 'FILED_AGAINST',
                 'cardinality': 'MANY_TO_ONE',
                 'business_meaning': 'Each claim is filed against one policy',
                 'join_hint': 'Essential join for claims analysis'
             },
-            ('claims', 'customers'): {
+            ('insurance_claims', 'insurance_customers'): {
                 'relationship_type': 'FILED_BY',
                 'cardinality': 'MANY_TO_ONE',
-                'business_meaning': 'Each claim is filed by one customer',
+                'business_meaning': 'Each claim is filed by one customer via policy',
                 'join_hint': 'Important for customer claim history'
             }
         }
@@ -997,7 +1021,9 @@ class BQKnowledgeGraphGenerator:
             
             # Link rules to applicable tables
             for table in rule["applies_to"]:
-                self.graph.add((rule_uri, self.BUSINESS.appliesTo, Literal(table)))
+                # Link to actual table URI, not just a literal
+                actual_table_uri = URIRef(f"http://bigquery.org/projects/{self.project_id}/datasets/{self.dataset_id}/tables/{table}")
+                self.graph.add((rule_uri, self.BUSINESS.appliesTo, actual_table_uri))
             
             # Mark complex rules that require subqueries
             if rule.get("requires_subquery"):
@@ -1127,29 +1153,45 @@ class BQKnowledgeGraphGenerator:
             "agent": ["distributor", "sales_channel", "intermediary"]
         }
         
-        # Add table synonyms to graph
+        # Add table synonyms to graph - link to actual table URIs
         for table_name, synonyms in table_synonyms.items():
-            table_uri = URIRef(f"http://bigquery.org/synonym-mappings/tables/{table_name}")
-            self.graph.add((table_uri, RDF.type, self.BUSINESS.TableSynonyms))
-            self.graph.add((table_uri, RDFS.label, Literal(table_name)))
+            # Get the actual table URI from the dataset
+            actual_table_uri = URIRef(f"http://bigquery.org/projects/{self.project_id}/datasets/{self.dataset_id}/tables/{table_name}")
+            
+            # Create synonym mapping URI
+            synonym_mapping_uri = URIRef(f"http://bigquery.org/synonym-mappings/tables/{table_name}")
+            self.graph.add((synonym_mapping_uri, RDF.type, self.BUSINESS.TableSynonyms))
+            self.graph.add((synonym_mapping_uri, RDFS.label, Literal(table_name)))
+            # CRITICAL: Link synonym mapping to actual table
+            self.graph.add((synonym_mapping_uri, self.BUSINESS.mapsToTable, actual_table_uri))
             
             for synonym in synonyms:
-                synonym_uri = URIRef(f"{table_uri}/aliases/{synonym.replace(' ', '_')}")
+                synonym_uri = URIRef(f"{synonym_mapping_uri}/aliases/{synonym.replace(' ', '_')}")
                 self.graph.add((synonym_uri, RDF.type, self.BUSINESS.Alias))
                 self.graph.add((synonym_uri, RDFS.label, Literal(synonym)))
-                self.graph.add((table_uri, self.BUSINESS.hasAlias, synonym_uri))
+                self.graph.add((synonym_mapping_uri, self.BUSINESS.hasAlias, synonym_uri))
+                # CRITICAL: Link each alias to the actual table
+                self.graph.add((synonym_uri, self.BUSINESS.aliasFor, actual_table_uri))
         
-        # Add column synonyms to graph
+        # Add column synonyms to graph - link to actual column URIs
         for (table_name, col_name), synonyms in column_synonyms.items():
-            col_uri = URIRef(f"http://bigquery.org/synonym-mappings/columns/{table_name}/{col_name}")
-            self.graph.add((col_uri, RDF.type, self.BUSINESS.ColumnSynonyms))
-            self.graph.add((col_uri, RDFS.label, Literal(f"{table_name}.{col_name}")))
+            # Get the actual column URI from the dataset
+            actual_col_uri = URIRef(f"http://bigquery.org/projects/{self.project_id}/datasets/{self.dataset_id}/tables/{table_name}/columns/{col_name}")
+            
+            # Create column synonym mapping URI
+            col_synonym_uri = URIRef(f"http://bigquery.org/synonym-mappings/columns/{table_name}/{col_name}")
+            self.graph.add((col_synonym_uri, RDF.type, self.BUSINESS.ColumnSynonyms))
+            self.graph.add((col_synonym_uri, RDFS.label, Literal(f"{table_name}.{col_name}")))
+            # CRITICAL: Link synonym mapping to actual column
+            self.graph.add((col_synonym_uri, self.BUSINESS.mapsToColumn, actual_col_uri))
             
             for synonym in synonyms:
-                synonym_uri = URIRef(f"{col_uri}/aliases/{synonym.replace(' ', '_')}")
+                synonym_uri = URIRef(f"{col_synonym_uri}/aliases/{synonym.replace(' ', '_')}")
                 self.graph.add((synonym_uri, RDF.type, self.BUSINESS.Alias))
                 self.graph.add((synonym_uri, RDFS.label, Literal(synonym)))
-                self.graph.add((col_uri, self.BUSINESS.hasAlias, synonym_uri))
+                self.graph.add((col_synonym_uri, self.BUSINESS.hasAlias, synonym_uri))
+                # CRITICAL: Link each alias to the actual column
+                self.graph.add((synonym_uri, self.BUSINESS.aliasFor, actual_col_uri))
         
         # Add business concepts
         for concept, related_terms in business_concepts.items():
