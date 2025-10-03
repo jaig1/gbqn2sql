@@ -48,6 +48,14 @@ except ImportError as e:
     st.error(f"Failed to import BigQuery Knowledge Graph Visualizer: {e}")
     GBQ_VISUALIZER_AVAILABLE = False
 
+# Import Ontology Views
+try:
+    from ontology_views import render_ontology_views_page
+    ONTOLOGY_VIEWS_AVAILABLE = True
+except ImportError as e:
+    st.error(f"Failed to import Ontology Views: {e}")
+    ONTOLOGY_VIEWS_AVAILABLE = False
+
 # Import BigQuery Knowledge Graph Context Builder
 try:
     from BQKnowledgeGraphContextBuilder import BQKnowledgeGraphContextBuilder
@@ -1064,6 +1072,40 @@ def query_interface_page():
                     st.session_state.ai_execute_example = example
                     st.rerun()
     
+    # 3.5. Analysis Questions dropdown (NEW)
+    with st.expander("Analysis Questions"):
+        st.markdown("### Advanced Business Analysis Questions")
+        st.write("These questions demonstrate complex analytical capabilities combining multiple data dimensions:")
+        
+        analysis_questions = [
+            "Show me all high-risk customers with multiple claims above the median claim amount, calculate their risk scores based on claim frequency and total amounts, categorize them by age, and provide risk management recommendations.",
+            
+            "Segment all customers into Premium, Standard, Budget, and Basic categories based on their annual premiums, calculate 5-year projected customer lifetime value, and show risk distribution within each segment.",
+            
+            "Identify customers at high risk of not renewing their policies by analyzing their claims history, loss ratios, and claims patterns, then provide specific retention strategies and risk categories.",
+            
+            "Find cross-selling opportunities by analyzing customer life stages, current policy portfolios, missing coverage gaps, and provide prioritized recommendations for Auto-Home bundles, Life insurance, and Umbrella policies.",
+            
+            "Analyze how specialized each agent is in different insurance products, compare their loss ratios to market averages, assess their risk selection quality, and provide strategic recommendations for specialization or diversification.",
+            
+            "Analyze claims patterns by season and policy type, identify high-risk periods, calculate frequency and severity indexes, and provide seasonal preparation strategies and prevention campaigns."
+        ]
+        
+        # Create shorter display names for the buttons
+        analysis_display_names = [
+            "High-Risk Customer Analysis & Risk Scores",
+            "Customer Segmentation & Lifetime Value Analysis", 
+            "Policy Renewal Risk Assessment",
+            "Cross-Selling Opportunity Analysis",
+            "Agent Specialization & Performance Analysis",
+            "Seasonal Claims Pattern Analysis"
+        ]
+        
+        for i, (display_name, full_question) in enumerate(zip(analysis_display_names, analysis_questions)):
+            if st.button(f"📊 {display_name}", key=f"ai_analysis_{i}"):
+                st.session_state.ai_execute_example = full_question
+                st.rerun()
+    
     # 4. Generate SQL button
     execute_manual_query = st.button("Generate SQL", type="primary") and question.strip()
     
@@ -1207,7 +1249,7 @@ def main():
     # Available pages
     page = st.sidebar.radio(
         "Select Page:",
-        ["🗃️ Database Explorer", "🕸️ Knowledge Graph", "📋 Schema Context", "🚀 Query Interface"]  # More pages will be added in subsequent steps
+        ["🗃️ Database Explorer", "🕸️ Knowledge Graph", "📋 Schema Context", "🚀 Query Interface", "📊 Ontology Views"]
     )
     
     # System status in sidebar
@@ -1288,6 +1330,12 @@ def main():
         schema_viewer_page()
     elif page == "🚀 Query Interface":
         query_interface_page()
+    elif page == "📊 Ontology Views":
+        if ONTOLOGY_VIEWS_AVAILABLE:
+            render_ontology_views_page()
+        else:
+            st.error("❌ Ontology Views not available.")
+            st.info("Please ensure ontology_views.py module is properly installed.")
 
 if __name__ == "__main__":
     main()

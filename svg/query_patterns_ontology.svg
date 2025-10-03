@@ -1,0 +1,212 @@
+<svg viewBox="0 0 1400 950" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .class-box { fill: #dbeafe; stroke: #1e40af; stroke-width: 2; }
+      .class-title { fill: #1e3a8a; font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; }
+      .property-text { fill: #374151; font-family: 'Courier New', monospace; font-size: 11px; }
+      .namespace-label { fill: #6b7280; font-family: Arial, sans-serif; font-size: 10px; font-style: italic; }
+      .relation-line { stroke: #6b7280; stroke-width: 2; fill: none; }
+      .relation-label { fill: #059669; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; }
+      .example-box { fill: #fef3c7; stroke: #d97706; stroke-width: 1; }
+      .example-text { fill: #92400e; font-family: 'Courier New', monospace; font-size: 10px; }
+      .instance-box { fill: #f0fdf4; stroke: #16a34a; stroke-width: 2; stroke-dasharray: 3,3; }
+      .instance-title { fill: #166534; font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#6b7280" />
+    </marker>
+    <marker id="comp-arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#dc2626" />
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="700" y="30" text-anchor="middle" style="font-family: Arial; font-size: 22px; font-weight: bold; fill: #111827;">
+    Query Patterns &amp; Guidelines Ontology Slice
+  </text>
+  <text x="700" y="55" text-anchor="middle" style="font-family: Arial; font-size: 12px; fill: #6b7280;">
+    Reusable Query Templates and Join Pattern Knowledge
+  </text>
+
+  <!-- ============ CORE CLASSES ============ -->
+
+  <!-- Table Class (from SQL namespace) -->
+  <g id="table-class">
+    <rect x="50" y="100" width="200" height="110" class="class-box" rx="5"/>
+    <text x="150" y="120" text-anchor="middle" class="class-title">sql:Table</text>
+    <text x="60" y="138" class="namespace-label">&lt;&lt;Class&gt;&gt;</text>
+    <line x1="50" y1="145" x2="250" y2="145" stroke="#1e40af" stroke-width="1"/>
+    <text x="60" y="162" class="property-text">+ identifier: string</text>
+    <text x="60" y="178" class="property-text">+ inSchema: Schema</text>
+    <text x="60" y="194" class="property-text">+ description: string</text>
+  </g>
+
+  <!-- QueryGuidelines Class -->
+  <g id="guidelines-class">
+    <rect x="350" y="100" width="260" height="130" class="class-box" rx="5"/>
+    <text x="480" y="120" text-anchor="middle" class="class-title">sql:QueryGuidelines</text>
+    <text x="360" y="138" class="namespace-label">&lt;&lt;Class&gt;&gt;</text>
+    <line x1="350" y1="145" x2="610" y2="145" stroke="#1e40af" stroke-width="1"/>
+    <text x="360" y="162" class="property-text">+ identifier: string</text>
+    <text x="360" y="178" class="property-text">+ description: string</text>
+    <text x="360" y="194" class="property-text">+ domain: string</text>
+    <text x="360" y="210" class="property-text">+ hasPattern: QueryPattern [*]</text>
+  </g>
+
+  <!-- QueryPattern Class -->
+  <g id="pattern-class">
+    <rect x="710" y="100" width="280" height="170" class="class-box" rx="5"/>
+    <text x="850" y="120" text-anchor="middle" class="class-title">sql:QueryPattern</text>
+    <text x="720" y="138" class="namespace-label">&lt;&lt;Class&gt;&gt;</text>
+    <line x1="710" y1="145" x2="990" y2="145" stroke="#1e40af" stroke-width="1"/>
+    <text x="720" y="162" class="property-text">+ label: string</text>
+    <text x="720" y="178" class="property-text">+ description: string</text>
+    <text x="720" y="194" class="property-text">+ sqlPattern: string</text>
+    <text x="720" y="210" class="property-text">+ useCase: string</text>
+    <text x="720" y="226" class="property-text">+ complexity: string</text>
+    <text x="720" y="242" class="property-text">+ involvesTable: Table [*]</text>
+    <text x="720" y="258" class="property-text">+ usesJoin: JoinPattern [*]</text>
+  </g>
+
+  <!-- JoinPattern Class -->
+  <g id="join-class">
+    <rect x="1090" y="100" width="280" height="210" class="class-box" rx="5"/>
+    <text x="1230" y="120" text-anchor="middle" class="class-title">sql:JoinPattern</text>
+    <text x="1100" y="138" class="namespace-label">&lt;&lt;Class&gt;&gt;</text>
+    <line x1="1090" y1="145" x2="1370" y2="145" stroke="#1e40af" stroke-width="1"/>
+    <text x="1100" y="162" class="property-text">+ label: string</text>
+    <text x="1100" y="178" class="property-text">+ description: string</text>
+    <text x="1100" y="194" class="property-text">+ joinPattern: string (SQL)</text>
+    <text x="1100" y="210" class="property-text">+ joinType: string</text>
+    <text x="1100" y="226" class="property-text">+ directionality: string</text>
+    <text x="1100" y="242" class="property-text">+ exampleQuery: string</text>
+    <text x="1100" y="258" class="property-text">+ usage: string</text>
+    <text x="1100" y="274" class="property-text">+ purpose: string</text>
+    <text x="1100" y="290" class="property-text">+ connectsTables: Table [2..*]</text>
+  </g>
+
+  <!-- Relationships -->
+  <path d="M 610 165 L 710 165" class="relation-line" marker-end="url(#arrow)"/>
+  <text x="640" y="155" class="relation-label">hasPattern</text>
+  <text x="650" y="175" style="font-size: 10px; fill: #6b7280;">[1..*]</text>
+
+  <path d="M 850 270 L 850 340 L 1230 340 L 1230 310" class="relation-line" marker-end="url(#arrow)"/>
+  <text x="1000" y="330" class="relation-label">usesJoin</text>
+  <text x="1050" y="350" style="font-size: 10px; fill: #6b7280;">[0..*]</text>
+
+  <path d="M 250 155 L 350 155" class="relation-line" marker-end="url(#arrow)"/>
+  <text x="285" y="145" class="relation-label">documented in</text>
+
+  <path d="M 150 210 L 150 300 L 850 300 L 850 270" class="relation-line" marker-end="url(#arrow)"/>
+  <text x="450" y="290" class="relation-label">involvesTable</text>
+
+  <path d="M 150 210 L 150 380 L 1230 380 L 1230 310" class="relation-line" marker-end="url(#arrow)"/>
+  <text x="650" y="370" class="relation-label">connectsTables</text>
+
+  <!-- ============ EXAMPLE INSTANCES ============ -->
+
+  <!-- JoinPattern Instance 1: Customer→Policy -->
+  <g id="join-instance-1">
+    <rect x="50" y="430" width="380" height="220" class="instance-box" rx="5"/>
+    <text x="240" y="450" text-anchor="middle" class="instance-title">Instance: Customer→Policy Join</text>
+    <text x="60" y="468" class="namespace-label">&lt;&lt;sql:JoinPattern&gt;&gt;</text>
+    <line x1="50" y1="475" x2="430" y2="475" stroke="#16a34a" stroke-width="1"/>
+    
+    <text x="60" y="492" class="property-text">label: "Customer→Policy"</text>
+    <text x="60" y="508" class="property-text">joinType: "INNER"</text>
+    <text x="60" y="524" class="property-text">directionality: "one-to-many"</text>
+    <text x="60" y="540" class="property-text">purpose: "Links customers to policies"</text>
+    
+    <rect x="60" y="550" width="360" height="90" class="example-box" rx="3"/>
+    <text x="70" y="565" style="font-size: 10px; fill: #92400e; font-weight: bold;">joinPattern (SQL):</text>
+    <text x="70" y="582" class="example-text">insurance_customers c</text>
+    <text x="70" y="596" class="example-text">JOIN insurance_policies p</text>
+    <text x="70" y="610" class="example-text">  ON c.customer_id = p.customer_id</text>
+    <text x="70" y="630" style="font-size: 9px; fill: #6b7280;">Usage: Customer demographics + policy details</text>
+  </g>
+
+  <!-- JoinPattern Instance 2: Policy→Claim -->
+  <g id="join-instance-2">
+    <rect x="470" y="430" width="380" height="220" class="instance-box" rx="5"/>
+    <text x="660" y="450" text-anchor="middle" class="instance-title">Instance: Policy→Claim Join</text>
+    <text x="480" y="468" class="namespace-label">&lt;&lt;sql:JoinPattern&gt;&gt;</text>
+    <line x1="470" y1="475" x2="850" y2="475" stroke="#16a34a" stroke-width="1"/>
+    
+    <text x="480" y="492" class="property-text">label: "Policy→Claim"</text>
+    <text x="480" y="508" class="property-text">joinType: "INNER"</text>
+    <text x="480" y="524" class="property-text">directionality: "one-to-many"</text>
+    <text x="480" y="540" class="property-text">purpose: "Links policies to claims"</text>
+    
+    <rect x="480" y="550" width="360" height="90" class="example-box" rx="3"/>
+    <text x="490" y="565" style="font-size: 10px; fill: #92400e; font-weight: bold;">joinPattern (SQL):</text>
+    <text x="490" y="582" class="example-text">insurance_policies p</text>
+    <text x="490" y="596" class="example-text">JOIN insurance_claims cl</text>
+    <text x="490" y="610" class="example-text">  ON p.policy_id = cl.policy_id</text>
+    <text x="490" y="630" style="font-size: 9px; fill: #6b7280;">Usage: Policy coverage and claim events</text>
+  </g>
+
+  <!-- QueryPattern Instance -->
+  <g id="query-instance-1">
+    <rect x="890" y="430" width="480" height="260" class="instance-box" rx="5"/>
+    <text x="1130" y="450" text-anchor="middle" class="instance-title">Instance: Claims Analysis Pattern</text>
+    <text x="900" y="468" class="namespace-label">&lt;&lt;sql:QueryPattern&gt;&gt;</text>
+    <line x1="890" y1="475" x2="1370" y2="475" stroke="#16a34a" stroke-width="1"/>
+    
+    <text x="900" y="492" class="property-text">label: "Claims Analysis"</text>
+    <text x="900" y="508" class="property-text">useCase: "Claims investigation and analysis"</text>
+    <text x="900" y="524" class="property-text">complexity: "medium"</text>
+    <text x="900" y="540" class="property-text">usesJoin: [Policy→Claim, Customer→Policy]</text>
+    
+    <rect x="900" y="550" width="460" height="130" class="example-box" rx="3"/>
+    <text x="910" y="565" style="font-size: 10px; fill: #92400e; font-weight: bold;">sqlPattern:</text>
+    <text x="910" y="582" class="example-text">SELECT c.claim_id, c.claim_amount,</text>
+    <text x="910" y="596" class="example-text">       c.claim_status, p.policy_id,</text>
+    <text x="910" y="610" class="example-text">       cust.first_name, cust.last_name</text>
+    <text x="910" y="624" class="example-text">FROM insurance_claims c</text>
+    <text x="910" y="638" class="example-text">JOIN insurance_policies p ON c.policy_id = p.policy_id</text>
+    <text x="910" y="652" class="example-text">JOIN insurance_customers cust</text>
+    <text x="910" y="666" class="example-text">  ON p.customer_id = cust.customer_id</text>
+  </g>
+
+  <!-- Property Enumeration -->
+  <g id="property-types">
+    <rect x="50" y="720" width="600" height="200" fill="#f0f9ff" stroke="#3b82f6" stroke-width="1" rx="5"/>
+    <text x="60" y="745" style="font-family: Arial; font-size: 14px; font-weight: bold; fill: #1e40af;">Key Properties by Type</text>
+    
+    <text x="70" y="770" style="font-family: Arial; font-size: 12px; font-weight: bold; fill: #374151;">Structural:</text>
+    <text x="80" y="788" style="font-family: Arial; font-size: 11px; fill: #374151;">• joinType: INNER, LEFT, RIGHT, FULL, CROSS</text>
+    <text x="80" y="804" style="font-family: Arial; font-size: 11px; fill: #374151;">• directionality: one-to-one, one-to-many, many-to-many</text>
+    
+    <text x="70" y="830" style="font-family: Arial; font-size: 12px; font-weight: bold; fill: #374151;">Semantic:</text>
+    <text x="80" y="848" style="font-family: Arial; font-size: 11px; fill: #374151;">• purpose: Business rationale for the pattern</text>
+    <text x="80" y="864" style="font-family: Arial; font-size: 11px; fill: #374151;">• usage: When and how to apply the pattern</text>
+    <text x="80" y="880" style="font-family: Arial; font-size: 11px; fill: #374151;">• useCase: Business scenario description</text>
+    
+    <text x="70" y="905" style="font-family: Arial; font-size: 12px; font-weight: bold; fill: #374151;">Code:</text>
+    <text x="80" y="910" style="font-family: Arial; font-size: 11px; fill: #374151;">• sqlPattern: Complete executable SQL template</text>
+  </g>
+
+  <!-- Benefits Box -->
+  <g id="benefits">
+    <rect x="690" y="720" width="680" height="200" fill="#f0fdf4" stroke="#16a34a" stroke-width="1" rx="5"/>
+    <text x="700" y="745" style="font-family: Arial; font-size: 14px; font-weight: bold; fill: #166534;">Benefits of Query Pattern Ontology</text>
+    
+    <text x="710" y="770" style="font-family: Arial; font-size: 11px; fill: #374151;">✓ <tspan font-weight="bold">Text-to-SQL Translation:</tspan> Map natural language to query templates</text>
+    <text x="710" y="790" style="font-family: Arial; font-size: 11px; fill: #374151;">✓ <tspan font-weight="bold">Query Optimization:</tspan> Pre-validated join patterns reduce errors</text>
+    <text x="710" y="810" style="font-family: Arial; font-size: 11px; fill: #374151;">✓ <tspan font-weight="bold">Knowledge Sharing:</tspan> Codify institutional query knowledge</text>
+    <text x="710" y="830" style="font-family: Arial; font-size: 11px; fill: #374151;">✓ <tspan font-weight="bold">Auto-completion:</tspan> Suggest relevant patterns to users</text>
+    <text x="710" y="850" style="font-family: Arial; font-size: 11px; fill: #374151;">✓ <tspan font-weight="bold">Training Data:</tspan> Examples for ML-based query generation</text>
+    <text x="710" y="870" style="font-family: Arial; font-size: 11px; fill: #374151;">✓ <tspan font-weight="bold">Documentation:</tspan> Self-documenting query patterns</text>
+    <text x="710" y="890" style="font-family: Arial; font-size: 11px; fill: #374151;">✓ <tspan font-weight="bold">Performance Hints:</tspan> Store execution plans and indexing guidance</text>
+  </g>
+
+  <!-- Legend -->
+  <g id="legend">
+    <rect x="1130" y="100" width="20" height="15" class="class-box"/>
+    <text x="1155" y="112" style="font-family: Arial; font-size: 10px; fill: #374151;">Class Definition</text>
+    
+    <rect x="1130" y="120" width="20" height="15" class="instance-box"/>
+    <text x="1155" y="132" style="font-family: Arial; font-size: 10px; fill: #374151;">Instance Example</text>
+  </g>
+
+</svg>
